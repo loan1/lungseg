@@ -22,7 +22,7 @@ import torch
 
 from torchsummary import summary
 
-from torch.nn import Linear, BCELoss
+from torch.nn import Linear, BCELoss, CrossEntropyLoss, BCEWithLogitsLoss
 from torch.optim import Adam, lr_scheduler
 from torch.utils.data import DataLoader,Dataset
 
@@ -51,14 +51,31 @@ def get_opt():
 
 # img, masks = next(iter(train_loader))
 # print(img, masks)
+def imshow(input):
+    """ Imshow for Tensor"""
+    # print(input.shape)
+    input = input.numpy().transpose((3,2,0,1))
+    # print(input.shape)
+    input = input*[0.5] + [0.5]
+    input = np.squeeze(input)
+    # print(input)
+    input = np.clip(input, 0, 1)
+    plt.imshow(input, cmap = 'gray')
+    plt.show()
+
 
 if __name__ == '__main__':
 
     opt = get_opt()
+    
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    criterion = BCELoss()
+    criterion = BCEWithLogitsLoss()
     model = UNet_ResNet.to(device)
     optimizer = Adam(model.parameters(), opt.lr)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=14, gamma=0.1)
-    training_loop(model, optimizer, criterion, scheduler, device, opt.num_epochs, dataloader, opt.CHECKPOINT_PATH, opt)
+    training_loop(model, optimizer, criterion, scheduler, device, opt.num_epochs, dataloader, opt.CHECKPOINT_PATH)
+
+    image, mask = next(iter(dataloader()['train']))
+
+   
 

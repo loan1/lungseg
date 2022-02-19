@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.nn import CrossEntropyLoss
 import torch
-def training_loop(model, optimizer, criterion, scheduler, device, num_epochs, dataloader, CHECKPOINT_PATH, opt):
+def training_loop(model, optimizer, criterion, scheduler, device, num_epochs, dataloader, CHECKPOINT_PATH):
     model.to(device)
     #List to store loss to visualize
     lossli = []
@@ -26,12 +26,13 @@ def training_loop(model, optimizer, criterion, scheduler, device, num_epochs, da
         ###################
         
         model.train()
-        for data, mask in tqdm(dataloader(opt)['train']):
+        for data, mask in tqdm(dataloader()['train']):
             data = data.to(device)
             mask = mask.to(device)
             optimizer.zero_grad()
             output = model(data)
-            output = torch.nn.Sigmoid()(output)
+            # print(type(output))
+            # output = torch.nn.Softmax()(output)
 
             loss = criterion(output, mask)
             loss.backward()
@@ -40,9 +41,11 @@ def training_loop(model, optimizer, criterion, scheduler, device, num_epochs, da
             
             train_loss += loss.item()*data.size(0)
             
-            _, pred = torch.max(output, 1)              
+            _, pred = torch.max(output,1) 
+
+            corrects = (pred.eq(mask)).int()
+            train_acc += corrects.sum()/corrects.numel()
             
-            train_acc += pred.eq(mask).sum().item()
             
         scheduler.step() ###########
             
@@ -52,29 +55,27 @@ def training_loop(model, optimizer, criterion, scheduler, device, num_epochs, da
         
         model.eval()
         with torch.no_grad():
-            for data, mask in tqdm(dataloader(opt)['val']):
+            for data, mask in tqdm(dataloader()['val']):
                 data = data.to(device)
                 mask = mask.to(device)
                 output = model(data)
-                output = torch.nn.Sigmoid()(output)
+                # output = torch.nn.Softmax()(output)
                 
                 loss = criterion(output, mask)
+
                 valid_loss += loss.item()*data.size(0)
                 
                 # Calculate accuracy
                 _, pred = torch.max(output, 1)
-#                 y_true += target.tolist()
-#                 y_pred += pred.tolist()  
-                
-                valid_acc +=  pred.eq(mask).sum().item()
+                corrects1 = (pred.eq(mask)).int()
+                valid_acc += corrects1.sum()/corrects1.numel()
+                # valid_acc +=  pred.eq(mask).sum().item()
        
         # calculate average losses
         train_loss = train_loss/len(dataloader()['train'].dataset)
         valid_loss = valid_loss/len(dataloader()['val'].dataset)
         lossli.append({'epoch':epoch,'train_loss': train_loss,'valid_loss':valid_loss})
-        
-        train_acc = train_acc*100/len(dataloader()['train'].dataset)
-        valid_acc = valid_acc*100/len(dataloader()['val'].dataset)
+
         accli.append({'epoch':epoch,'train_acc': train_acc,'valid_acc':valid_acc})
         
         ####################
