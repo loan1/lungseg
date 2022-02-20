@@ -1,37 +1,63 @@
-import matplotlib.pyplot as plt
 from dataset import *
-
-# from main import *
+# from ..main import get_opt
+import matplotlib.pyplot as plt
 import numpy as np
 import argparse
+from transform import *
 
-def imshow(input, title = None):
+def imshow(input):
     """ Imshow for Tensor"""
+    print(input.shape)
+    # input = input.numpy(dtype=np.float32).transpose((2, 3, 1, 0))
     input = input.numpy().transpose((1, 2, 0))
-    input = input*[0.5] + [0.5]
-    print(input)
+    print(input.shape)
+    input = input*0.5 + 0.5
+    input = np.squeeze(input)
+    # print(input)
     input = np.clip(input, 0, 1)
-    plt.imshow(input)
+    plt.imshow(input, cmap = 'gray')
+    plt.show()
 
-def get_opt():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--CHECKPOINT_PATH", default = '../model/UNet.pt',type=str)
-    parser.add_argument('--img_path', default='../dataset_lungseg/images/', type=str)
-    parser.add_argument('--mask_path', default='../dataset_lungseg/masks/', type= str)
+mask_path = '../dataset_lungseg/masks/'
+img_path = '../dataset_lungseg/images/'
+mask_list = os.listdir(mask_path)
+img_mask_list = [(mask_names.replace('_mask',''), mask_names) for mask_names in mask_list]
 
-    parser.add_argument('--BATCH_SIZE', default=4, type=int)
-    parser.add_argument('--num_epochs', default= 100, type=int)
-    parser.add_argument('--lr', default=2e-4, type=float)
+train_set = LungDataset(img_mask_list, img_path, mask_path, transform = (image_t, mask_t))
+# train_set = dataloader()['train']
+image, mask = next(iter(train_set))
+# print(image.shape)
+# print(torch.max(image))
+# print(image.min())
+# print(mask.max())
+# print(mask.min())
 
-    opt = parser.parse_args()
-    return opt
+plt.subplot(1,2,1)
+imshow(image)
 
-opt = get_opt()
-image, mask = next(iter(dataloader(opt)['train']))
+plt.subplot(1,2,2)
+imshow(mask)
 
-fig = plt.figure(figsize = (20,10))
+# print(mask)
 
-for idx in np.arange(opt.BATCH_SIZE):
-    ax = fig.add_subplot()
-    imshow(image[idx], 'Image')
-    imshow(mask[idx], 'Mask')
+def plot_acc_loss (loss, val_loss, acc, val_acc):
+    """ plot training and validation loss and accuracy """
+    plt.figure (figsize = (12, 4))
+    plt.subplot (1, 2, 1)
+    plt.plot (range (len (loss)), loss, 'b-', label = 'Training')
+    plt.plot (range (len (loss)), val_loss, 'bo-', label = 'Validation')
+    plt.xlabel ('Epochs')
+    plt.ylabel ('Loss')
+    plt.title ('Loss')
+    plt.legend ()
+
+    plt.subplot (1, 2, 2)
+    plt.plot (range (len (acc)), acc, 'b-', label = 'Training')
+    plt.plot (range (len (acc)), val_acc, 'bo-', label = 'Validation')
+    plt.xlabel ('Epochs')
+    plt.ylabel ('accuracy')
+    plt.title ('Accuracy')
+    plt.legend ()
+
+    plt.show ()
+
